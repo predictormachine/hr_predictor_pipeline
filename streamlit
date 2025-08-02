@@ -1,0 +1,15 @@
+import streamlit as st
+import pandas as pd
+from src.predict import predict_df
+
+st.set_page_config(page_title="MLB HR Predictor", layout="wide")
+st.title("🏟️ Statcast-Powered Home Run Predictor")
+
+date = st.date_input("Select date", value=pd.to_datetime("2025-07-30"))
+n    = st.slider("Number of hitters", 1, 30, 10)
+
+if st.button("Generate Picks"):
+    with st.spinner("Computing…"):
+        results = predict_df(date.strftime("%Y-%m-%d"), n)
+    st.table(results)
+
