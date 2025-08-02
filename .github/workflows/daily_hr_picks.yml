@@ -39,4 +39,3 @@ jobs:
             ```
             ${{ steps.picks.outputs.text }}
             ```
-
