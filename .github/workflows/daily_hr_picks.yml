@@ -35,11 +35,12 @@ jobs:
           echo "$OUTPUT"       >> $GITHUB_OUTPUT
           echo "EOF"           >> $GITHUB_OUTPUT
 
-      - name: Post to Slack
-        uses: slackapi/slack-github-action@v1.23.0
+      - name: Send HR Picks to Slack
+        uses: slackapi/slack-github-action@v1.26.0
         with:
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          text: |
+          slack-webhook-type: "incoming-webhook"
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack-message: |
             *Today's Top 10 HR Picks*  
             ```  
             ${{ steps.picks.outputs.HR_PICKS }}  
