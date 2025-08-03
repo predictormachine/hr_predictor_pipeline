@@ -2,17 +2,18 @@ name: Daily HR Picks
 
 on:
   schedule:
-    - cron: '0 13 * * *'
-  workflow_dispatch:
+    - cron: '0 12 * * *'
+  workflow_dispatch: {}
 
 jobs:
-  post-to-slack:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out code
+        uses: actions/checkout@v3
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
@@ -21,23 +22,26 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-          pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Generate picks
+      - name: Fetch data & compute picks
         id: picks
         run: |
           source venv/bin/activate
-          python -m src.predict $(date +'%Y-%m-%d') 10 > picks.txt
-          echo "::set-output name=text::$(sed 's/\"/\\\"/g' picks.txt)"
+          DATE=$(date +%F)
+          python -m src.data_fetcher $DATE
+          OUTPUT=$(python -m src.predict $DATE 10)
+          echo "HR_PICKS<<EOF" >> $GITHUB_OUTPUT
+          echo "$OUTPUT"       >> $GITHUB_OUTPUT
+          echo "EOF"           >> $GITHUB_OUTPUT
 
       - name: Post to Slack
-        uses: rtCamp/action-slack-notify@v2
+        uses: slackapi/slack-github-action@v1.23.0
         with:
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          message: |
-            *Daily MLB HR Picks for* `$(date +'%Y-%m-%d')`
-            ```
-            ${{ steps.picks.outputs.text }}
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          text: |
+            *Today's Top 10 HR Picks*  
+            ```  
+            ${{ steps.picks.outputs.HR_PICKS }}  
             ```
 
