@@ -3,6 +3,7 @@ name: Daily HR Picks
 on:
   schedule:
     - cron: '0 13 * * *'
+  workflow_dispatch:
 
 jobs:
   post-to-slack:
@@ -28,7 +29,7 @@ jobs:
         run: |
           source venv/bin/activate
           python -m src.predict $(date +'%Y-%m-%d') 10 > picks.txt
-          echo "::set-output name=text::$(sed 's/"/\\"/g' picks.txt)"
+          echo "::set-output name=text::$(sed 's/\"/\\\"/g' picks.txt)"
 
       - name: Post to Slack
         uses: rtCamp/action-slack-notify@v2
@@ -39,3 +40,4 @@ jobs:
             ```
             ${{ steps.picks.outputs.text }}
             ```
+
