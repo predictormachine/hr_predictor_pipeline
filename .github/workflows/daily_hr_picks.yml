@@ -2,8 +2,8 @@ name: Daily HR Picks
 
 on:
   schedule:
-    - cron: '0 12 * * *'
-  workflow_dispatch: {}
+    - cron: '0 12 * * *'       # every day at 12:00 UTC
+  workflow_dispatch: {}        # manual trigger
 
 jobs:
   publish:
@@ -31,22 +31,41 @@ jobs:
           DATE=$(date +%F)
           python -m src.data_fetcher $DATE
           HR_OUTPUT=$(python -m src.predict $DATE 10)
-          # write into GITHUB_OUTPUT for later steps
           echo "HR_PICKS<<EOF" >> $GITHUB_OUTPUT
-          echo "$HR_OUTPUT"       >> $GITHUB_OUTPUT
-          echo "EOF"              >> $GITHUB_OUTPUT
+          echo "$HR_OUTPUT"        >> $GITHUB_OUTPUT
+          echo "EOF"               >> $GITHUB_OUTPUT
 
       - name: Send HR Picks to Slack
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v1.26.0
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            text: "*Today's Top 10 HR Picks*"
-            blocks:
-              - type: section
-                text:
-                  type: mrkdwn
-                  text: |
-                    ```${{ steps.picks.outputs.HR_PICKS }}```
+          # Required for Incoming Webhook authentication
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack-webhook-type: incoming-webhook
 
+          # OPTION A: simple text message
+          slack-message: |
+            ⚾ Daily HR Picks for ${{ github.event.inputs.date || 'Today' }}! ⚾
+            Here are the top predictions:
+            ${{ steps.picks.outputs.HR_PICKS }}
+
+          # --- OR ---
+          # OPTION B: Block Kit JSON payload
+          # payload: |
+          #   {
+          #     "blocks": [
+          #       {
+          #         "type": "section",
+          #         "text": {
+          #           "type": "mrkdwn",
+          #           "text": "*⚾ Daily HR Picks for ${{ github.event.inputs.date || 'Today' }}! ⚾*"
+          #         }
+          #       },
+          #       {
+          #         "type": "section",
+          #         "text": {
+          #           "type": "mrkdwn",
+          #           "text": "``` ${{ steps.picks.outputs.HR_PICKS }} ```"
+          #         }
+          #       }
+          #     ]
+          #   }
