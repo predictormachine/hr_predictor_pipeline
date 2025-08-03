@@ -30,19 +30,23 @@ jobs:
           source venv/bin/activate
           DATE=$(date +%F)
           python -m src.data_fetcher $DATE
-          OUTPUT=$(python -m src.predict $DATE 10)
+          HR_OUTPUT=$(python -m src.predict $DATE 10)
+          # write into GITHUB_OUTPUT for later steps
           echo "HR_PICKS<<EOF" >> $GITHUB_OUTPUT
-          echo "$OUTPUT"       >> $GITHUB_OUTPUT
-          echo "EOF"           >> $GITHUB_OUTPUT
+          echo "$HR_OUTPUT"       >> $GITHUB_OUTPUT
+          echo "EOF"              >> $GITHUB_OUTPUT
 
       - name: Send HR Picks to Slack
-        uses: slackapi/slack-github-action@v1.26.0
+        uses: slackapi/slack-github-action@v2.1.1
         with:
-          slack-webhook-type: "incoming-webhook"
-          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          slack-message: |
-            *Today's Top 10 HR Picks*  
-            ```  
-            ${{ steps.picks.outputs.HR_PICKS }}  
-            ```
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "*Today's Top 10 HR Picks*"
+            blocks:
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: |
+                    ```${{ steps.picks.outputs.HR_PICKS }}```
 
