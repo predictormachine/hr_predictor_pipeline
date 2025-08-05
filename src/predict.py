@@ -28,10 +28,11 @@ def predict_df(date: str, top_n: int = 10) -> pd.DataFrame:
         "composite_score",
     ]
     existing_columns = [col for col in expected_columns if col in df.columns]
+    print(f"Selecting columns: {existing_columns}")
     if "batter" not in existing_columns:
-        print("Error: 'batter' column is missing after merging. Check feature_engineer.py renaming.")
+        print("Error: 'batter' column is missing after selection. Check feature_engineer.py renaming.")
     if "composite_score" not in existing_columns:
-        print("Error: 'composite_score' column is missing after calculations.")
+        print("Error: 'composite_score' column is missing after selection. Check feature_engineer.py calculations.")
     return df[existing_columns].head(top_n)
 
 def main():
@@ -44,3 +45,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

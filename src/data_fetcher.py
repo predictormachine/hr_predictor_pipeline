@@ -15,11 +15,12 @@ def fetch_statcast_for_date(date: str) -> pd.DataFrame:
     year = date.split("-")[0]
     start_dt = f"{year}-03-01"
     if _statcast_func is None:
-        return pd.DataFrame()
-    try:
-        df = _statcast_func(start_dt=start_dt, end_dt=date)
-    except Exception:
         df = pd.DataFrame()
+    else:
+        try:
+            df = _statcast_func(start_dt=start_dt, end_dt=date)
+        except Exception:
+            df = pd.DataFrame()
     os.makedirs(RAW_DIR, exist_ok=True)
     df.to_parquet(os.path.join(RAW_DIR, f"statcast_{date}.parquet"), index=False)
     return df
@@ -29,7 +30,10 @@ def fetch_lineups_for_date(date: str) -> pd.DataFrame:
         return pd.DataFrame()
     records = []
     try:
-        sched = statsapi.get("schedule", {"sportId": 1, "startDate": date, "endDate": date, "hydrate": "probablePitcher"})
+        sched = statsapi.get(
+            "schedule",
+            {"sportId": 1, "startDate": date, "endDate": date, "hydrate": "probablePitcher"}
+        )
     except Exception:
         sched = {}
     for day in sched.get("dates", []):
@@ -46,7 +50,10 @@ def fetch_lineups_for_date(date: str) -> pd.DataFrame:
                 box = statsapi.boxscore_data(gid) if gid else None
             except Exception:
                 box = None
-            for side, team_name, prob in [("away", away_team, away_prob), ("home", home_team, home_prob)]:
+            for side, team_name, prob in [
+                ("away", away_team, away_prob),
+                ("home", home_team, home_prob)
+            ]:
                 prob_name = prob.get("fullName")
                 prob_id = prob.get("id")
                 if box and side in box:
@@ -59,7 +66,11 @@ def fetch_lineups_for_date(date: str) -> pd.DataFrame:
                     if confirmed_id is not None:
                         player_key = f"ID{confirmed_id}"
                         confirmed_name = players.get(player_key, {}).get("person", {}).get("fullName")
-                    is_confirmed = confirmed_id == prob_id if confirmed_id is not None and prob_id is not None else False
+                    is_confirmed = (
+                        confirmed_id == prob_id
+                        if confirmed_id is not None and prob_id is not None
+                        else False
+                    )
                     for idx, bid in enumerate(bat_ids, start=1):
                         batter_info = players.get(f"ID{bid}", {}) or {}
                         person_data = batter_info.get("person", {}) or {}
@@ -99,3 +110,4 @@ def fetch_lineups_for_date(date: str) -> pd.DataFrame:
     os.makedirs(RAW_DIR, exist_ok=True)
     df.to_parquet(os.path.join(RAW_DIR, f"lineups_{date}.parquet"), index=False)
     return df
+
