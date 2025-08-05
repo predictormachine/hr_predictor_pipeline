@@ -52,32 +52,26 @@ def build_matchup_features(date: str) -> pd.DataFrame:
     pits = compute_pitcher_features(sc)
     lu   = load_lineups_for_date(date)
 
-    if "batter_id" in lu.columns:
-        lu["batter_id"] = lu["batter_id"].astype(str)
-    else:
-        raise KeyError("Expected 'batter_id' column not found in lineups DataFrame.")
-
-    if "batter" in bats.columns:
-        bats["batter"] = bats["batter"].astype(str)
-    else:
-        raise KeyError("Expected 'batter' column not found in batter features DataFrame.")
+    lu["batter_id"]  = lu["batter_id"].astype(str)
+    lu["pitcher_id"] = lu["pitcher_id"].astype(str)
+    bats["batter"]   = bats["batter"].astype(str)
+    pits["pitcher"]  = pits["pitcher"].astype(str)
 
     df = lu.merge(bats, left_on="batter_id", right_on="batter", how="left")
-
-    if "pitcher_id" in df.columns:
-        df["pitcher_id"] = df["pitcher_id"].astype(str)
-    else:
-        raise KeyError("Expected 'pitcher_id' column not found in merged DataFrame.")
-
-    if "pitcher" in pits.columns:
-        pits["pitcher"] = pits["pitcher"].astype(str)
-    else:
-        raise KeyError("Expected 'pitcher' column not found in pitcher features DataFrame.")
-
     df = df.merge(pits, left_on="pitcher_id", right_on="pitcher", how="left")
 
-    df.drop(columns=["batter","pitcher"], errors="ignore", inplace=True)
-    df.fillna(0, inplace=True)
+    df.rename(columns={"batter_name": "batter", "pitcher_name": "pitcher"}, inplace=True)
+    df.drop(columns=["batter_id", "pitcher_id", "batter", "pitcher"], errors="ignore", inplace=True)
+    df["batter"]  = lu["batter_name"]
+    df["pitcher"] = lu["pitcher_name"]
+
+    for col in [
+        "recent_hr_rate", "barrel_rate", "hr_rate_allowed",
+        "avg_exit_velocity", "avg_launch_angle",
+        "avg_exit_velocity_allowed", "barrel_rate_allowed"
+    ]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
     df["composite_score"] = (
         0.45 * df["recent_hr_rate"]

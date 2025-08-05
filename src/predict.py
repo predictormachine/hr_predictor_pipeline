@@ -10,20 +10,22 @@ def predict_df(date: str, top_n: int = 10) -> pd.DataFrame:
 
     expected_columns = [
         "team", "side", "batter", "pitcher",
-        "probable_pitcher", "is_confirmed",
+        "probable_pitcher_id",
+        "is_confirmed",
         "recent_hr_rate", "barrel_rate", "hr_rate_allowed", "composite_score"
     ]
-    existing = [c for c in expected_columns if c in df.columns]
-    missing  = set(expected_columns) - set(existing)
-    if missing:
-        print(f"Warning: these expected columns are missing: {sorted(missing)}")
-        print("Actual columns:", df.columns.tolist())
+    existing_columns = [col for col in expected_columns if col in df.columns]
+    print(f"Selecting columns: {existing_columns}")
+    if "batter" not in existing_columns:
+        print("Error: 'batter' column is missing after selection. Check feature_engineer.py renaming.")
+    if "composite_score" not in existing_columns:
+        print("Error: 'composite_score' column is missing after selection. Check feature_engineer.py calculations.")
 
-    return df[existing].head(top_n)
+    return df[existing_columns].head(top_n)
 
 def main():
     date = sys.argv[1]
-    n    = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
     result = predict_df(date, n)
     print(result.to_string(index=False))
 
