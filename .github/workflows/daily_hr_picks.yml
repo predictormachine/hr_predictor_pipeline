@@ -11,29 +11,26 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.12
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
-          python -m venv venv
-          source venv/bin/activate
           pip install -r requirements.txt
 
       - name: Fetch data & compute picks
         id: picks
         run: |
-          source venv/bin/activate
           DATE=$(date +%F)
-          python -m src.data_fetcher $DATE
-          HR_OUTPUT=$(python -m src.predict $DATE 10)
-          echo "HR_PICKS<<EOF" >> $GITHUB_OUTPUT
-          echo "$HR_OUTPUT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          python -m src.data_fetcher "$DATE" || exit 1
+          python -m src.predict "$DATE" 10 > hr_output.txt || exit 1
+          echo "HR_PICKS<<EOF" >> "$GITHUB_OUTPUT"
+          cat hr_output.txt >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Send HR Picks to Slack
         uses: slackapi/slack-github-action@v1.26.0
@@ -43,4 +40,6 @@ jobs:
           slack-message: |
             ⚾ Daily HR Picks for ${{ github.event.inputs.date || 'Today' }}! ⚾
             Here are the top predictions:
+            ```
             ${{ steps.picks.outputs.HR_PICKS }}
+            ```
