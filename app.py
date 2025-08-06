@@ -1,7 +1,9 @@
 import streamlit as st
-import pandas as pd
-import datetime
+from pybaseball import cache as bb_cache
 from src.predict import predict_df
+import datetime
+
+bb_cache.enable()
 
 st.set_page_config(page_title="MLB HR Predictor", layout="wide")
 st.title("🏟️ Statcast-Powered Home Run Predictor")
@@ -9,8 +11,8 @@ st.title("🏟️ Statcast-Powered Home Run Predictor")
 date_input = st.date_input("Select Date", value=datetime.date.today())
 n = st.slider("Number of hitters", 1, 30, 10)
 
-@st.cache_data
-def get_data(date_str: str, top_n: int) -> pd.DataFrame:
+@st.cache_data(ttl=3600, max_entries=10)
+def get_data(date_str: str, top_n: int):
     return predict_df(date_str, top_n)
 
 date_str = date_input.strftime("%Y-%m-%d")
@@ -24,7 +26,7 @@ if "selected_teams" not in st.session_state:
 selected_teams = st.multiselect(
     "Select Teams",
     options=available_teams,
-    default=st.session_state.get("selected_teams", available_teams),
+    default=st.session_state["selected_teams"],
     key="team_selector_widget"
 )
 st.session_state["selected_teams"] = selected_teams
@@ -41,12 +43,12 @@ if st.button("Generate Picks"):
     if selected_teams:
         df = df[df["team"].isin(selected_teams)]
     if status == "Confirmed":
-        df = df[df["is_confirmed"] == True]
+        df = df[df["is_confirmed"]]
     elif status == "Probable":
-        df = df[df["is_confirmed"] == False]
+        df = df[~df["is_confirmed"]]
     df = df.reset_index(drop=True)
     st.subheader("Predicted Home Run Hitters")
     st.dataframe(df)
-    if not df.empty and {"batter", "composite_score"}.issubset(df.columns):
-        st.bar_chart(df.set_index("batter")["composite_score"])
+    if not df.empty and {"batter_name", "composite_score"}.issubset(df.columns):
+        st.bar_chart(df.set_index("batter_name")["composite_score"])
 
