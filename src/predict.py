@@ -15,13 +15,10 @@ def predict_df(date: str, top_n: int = 10) -> pd.DataFrame:
     ]
     existing = [c for c in cols if c in df.columns]
     selected = df[existing].copy()
-    for col in selected.columns:
-        selected[col] = pd.to_numeric(selected[col], errors="coerce")
-    selected = selected.fillna(0)
-    integer_cols_to_convert = ["batting_order"]
-    for col in integer_cols_to_convert:
-        if col in selected.columns:
-            selected[col] = selected[col].astype("Int64")
+    for col in selected.select_dtypes(include=["float64"]).columns:
+        selected[col] = selected[col].fillna(0)
+    if "batting_order" in selected.columns:
+        selected["batting_order"] = pd.to_numeric(selected["batting_order"], errors="coerce").fillna(0).astype("Int64")
     return selected.head(top_n)
 
 def main():
@@ -29,7 +26,11 @@ def main():
         sys.exit("Usage: python -m src.predict YYYY-MM-DD [top_n]")
     date = sys.argv[1]
     n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
-    print(predict_df(date, n).to_string(index=False))
+    df = predict_df(date, n)
+    if df.empty:
+        print("No predictions available for this date.", file=sys.stderr)
+        sys.exit(1)
+    print(df.to_string(index=False))
 
 if __name__ == "__main__":
     main()
