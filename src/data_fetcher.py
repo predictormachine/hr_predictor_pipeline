@@ -1,95 +1,81 @@
 import os
+import sys
+import traceback
 import pandas as pd
-try:
-    import statsapi
-except ImportError:
-    statsapi = None
-try:
-    from pybaseball import statcast as _statcast_func
-except ImportError:
-    _statcast_func = None
+import pybaseball
+pybaseball.cache.enable()
+import statsapi
+from pybaseball import statcast
 
 RAW_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "data", "raw")
 
 def fetch_statcast_for_date(date: str) -> pd.DataFrame:
+    out = os.path.join(RAW_DIR, f"statcast_{date}.parquet")
+    if os.path.exists(out):
+        print(f"Loading cached Statcast data for {date}")
+        return pd.read_parquet(out)
+    print(f"Fetching Statcast data for {date} from March 1st of the season...")
     year = date.split("-")[0]
     start_dt = f"{year}-03-01"
-    if _statcast_func is None:
-        df = pd.DataFrame()
-    else:
-        try:
-            df = _statcast_func(start_dt=start_dt, end_dt=date)
-        except Exception:
-            df = pd.DataFrame()
+    df = statcast(start_dt=start_dt, end_dt=date)
     os.makedirs(RAW_DIR, exist_ok=True)
-    df.to_parquet(os.path.join(RAW_DIR, f"statcast_{date}.parquet"), index=False)
+    df.to_parquet(out, index=False)
+    print(f"Saved Statcast data to {out}")
     return df
 
 def fetch_lineups_for_date(date: str) -> pd.DataFrame:
-    if statsapi is None:
-        return pd.DataFrame()
+    out = os.path.join(RAW_DIR, f"lineups_{date}.parquet")
+    if os.path.exists(out):
+        print(f"Loading cached lineup data for {date}")
+        return pd.read_parquet(out)
+    print(f"Fetching lineup data for {date}...")
     records = []
-    try:
-        sched = statsapi.get(
-            "schedule",
-            {"sportId": 1, "startDate": date, "endDate": date, "hydrate": "probablePitcher"}
-        )
-    except Exception:
-        sched = {}
+    sched = statsapi.get(
+        "schedule",
+        {"sportId": 1, "startDate": date, "endDate": date, "hydrate": "probablePitcher"}
+    )
     for day in sched.get("dates", []):
         for game in day.get("games", []):
             if not isinstance(game, dict):
                 continue
             gid = game.get("gamePk")
-            away_team = game.get("teams", {}).get("away", {}).get("team", {}).get("name")
-            home_team = game.get("teams", {}).get("home", {}).get("team", {}).get("name")
-            probable = game.get("probablePitcher", {}) or {}
-            away_prob = probable.get("awayProbablePitcher", {}) or {}
-            home_prob = probable.get("homeProbablePitcher", {}) or {}
+            away = game.get("teams", {}).get("away", {}).get("team", {}).get("name")
+            home = game.get("teams", {}).get("home", {}).get("team", {}).get("name")
+            pp = game.get("probablePitcher", {}) or {}
+            away_prob = pp.get("awayProbablePitcher") or {}
+            home_prob = pp.get("homeProbablePitcher") or {}
             try:
-                box = statsapi.boxscore_data(gid) if gid else None
-            except Exception:
-                box = None
-            for side, team_name, prob in [
-                ("away", away_team, away_prob),
-                ("home", home_team, home_prob)
-            ]:
+                box = statsapi.boxscore_data(gid)
+            except Exception as e:
+                print(f"ERROR: Failed to fetch boxscore for game {gid} on {date}: {e}", file=sys.stderr)
+                traceback.print_exc(file=sys.stderr)
+                box = {}
+            for side, team_name, prob in (("away", away, away_prob), ("home", home, home_prob)):
                 prob_name = prob.get("fullName")
                 prob_id = prob.get("id")
-                if box and side in box:
-                    side_data = box.get(side, {}) or {}
-                    bat_ids = side_data.get("battingOrder", []) or []
-                    players = side_data.get("players", {}) or {}
-                    pitchers_list = side_data.get("pitchers", []) or []
-                    confirmed_id = pitchers_list[0] if pitchers_list else None
-                    confirmed_name = None
-                    if confirmed_id is not None:
-                        player_key = f"ID{confirmed_id}"
-                        confirmed_name = players.get(player_key, {}).get("person", {}).get("fullName")
-                    is_confirmed = (
-                        confirmed_id == prob_id
-                        if confirmed_id is not None and prob_id is not None
-                        else False
-                    )
-                    for idx, bid in enumerate(bat_ids, start=1):
-                        batter_info = players.get(f"ID{bid}", {}) or {}
-                        person_data = batter_info.get("person", {}) or {}
-                        position_data = batter_info.get("position", {}) or {}
-                        batter_name = person_data.get("fullName")
-                        position_abbrev = position_data.get("abbreviation")
+                side_data = box.get(side, {}) or {}
+                bat_ids = side_data.get("battingOrder", []) or []
+                players = side_data.get("players", {}) or {}
+                pitchers = side_data.get("pitchers", []) or []
+                starter = pitchers[0] if pitchers else None
+                starter_name = players.get(f"ID{starter}", {}).get("person", {}).get("fullName") if starter else None
+                is_confirmed = starter == prob_id if starter and prob_id else False
+                if bat_ids:
+                    for idx, bid in enumerate(bat_ids, 1):
+                        b = players.get(f"ID{bid}", {}) or {}
                         records.append({
                             "game_id": gid,
                             "team": team_name,
                             "side": side,
                             "batting_order": idx,
                             "batter_id": bid,
-                            "batter_name": batter_name,
-                            "position": position_abbrev,
-                            "pitcher_id": confirmed_id,
-                            "pitcher_name": confirmed_name,
+                            "batter_name": b.get("person", {}).get("fullName"),
+                            "position": b.get("position", {}).get("abbreviation"),
+                            "pitcher_id": starter,
+                            "pitcher_name": starter_name,
                             "probable_pitcher": prob_name,
                             "probable_pitcher_id": prob_id,
-                            "is_confirmed": is_confirmed,
+                            "is_confirmed": is_confirmed
                         })
                 else:
                     records.append({
@@ -100,14 +86,15 @@ def fetch_lineups_for_date(date: str) -> pd.DataFrame:
                         "batter_id": None,
                         "batter_name": None,
                         "position": None,
-                        "pitcher_id": None,
-                        "pitcher_name": None,
+                        "pitcher_id": starter,
+                        "pitcher_name": starter_name,
                         "probable_pitcher": prob_name,
                         "probable_pitcher_id": prob_id,
-                        "is_confirmed": False,
+                        "is_confirmed": is_confirmed
                     })
     df = pd.DataFrame(records)
     os.makedirs(RAW_DIR, exist_ok=True)
-    df.to_parquet(os.path.join(RAW_DIR, f"lineups_{date}.parquet"), index=False)
+    df.to_parquet(out, index=False)
+    print(f"Saved lineup data to {out}")
     return df
 
