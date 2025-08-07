@@ -15,35 +15,13 @@ def predict_df(date: str, top_n: int = 10) -> pd.DataFrame:
     ]
     existing = [c for c in cols if c in df.columns]
     selected = df[existing].copy()
-
-    print("\n--- DEBUG: Before NA Handling ---")
-    print(f"Selected Columns: {selected.columns.tolist()}")
-    print("Selected Dtypes:\n", selected.dtypes.to_string())
-    print("NaN Counts:\n", selected.isnull().sum().to_string())
-    print("DataFrame Head (with NaNs):\n", selected.head(10).to_string())
-
-    for col in selected.select_dtypes(include=['float64', 'int64', 'Int64']).columns:
-        if selected[col].isnull().any():
-            print(f"DEBUG: Filling NaNs in column {col} (dtype: {selected[col].dtype})")
-            selected[col] = selected[col].fillna(0)
-
+    for col in selected.columns:
+        selected[col] = pd.to_numeric(selected[col], errors="coerce")
+    selected = selected.fillna(0)
     integer_cols_to_convert = ["batting_order"]
-
     for col in integer_cols_to_convert:
-        if col in selected.columns and selected[col].dtype != 'Int64':
-            print(f"DEBUG: Converting column to Int64: {col} (current dtype: {selected[col].dtype})")
-            try:
-                selected[col] = pd.to_numeric(selected[col], errors='coerce').fillna(0).astype('Int64')
-                print(f"DEBUG: Successfully converted {col} to Int64")
-            except Exception as e:
-                print(f"ERROR: Failed to convert {col} to Int64: {e}")
-                selected[col] = pd.to_numeric(selected[col], errors='coerce').fillna(0)
-
-    print("\n--- DEBUG: After NA Handling and Conversions ---")
-    print("Selected Dtypes:\n", selected.dtypes.to_string())
-    print("NaN Counts:\n", selected.isnull().sum().to_string())
-    print("DataFrame Head (after handling):\n", selected.head(10).to_string())
-
+        if col in selected.columns:
+            selected[col] = selected[col].astype("Int64")
     return selected.head(top_n)
 
 def main():
