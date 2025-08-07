@@ -34,31 +34,51 @@ jobs:
           if [ -z "$DATE" ]; then
             DATE=$(date +%F)
           fi
-
           python -m src.predict "$DATE" 10 > hr_output.txt || { echo "Prediction script failed!"; exit 1; }
-
           if [ ! -s hr_output.txt ]; then
-            echo "Prediction script did not generate output or output file is empty!"
+            echo "HR_PICKS=" >> "$GITHUB_OUTPUT"
+            echo "RUN_DATE=$DATE" >> "$GITHUB_OUTPUT"
+            echo "hr_output.txt was not generated or is empty."
             exit 1
           fi
-
           {
             echo "HR_PICKS<<EOF"
             cat hr_output.txt
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
-
           echo "RUN_DATE=$DATE" >> "$GITHUB_OUTPUT"
 
       - name: Send HR Picks to Slack
+        if: ${{ steps.picks.outputs.HR_PICKS != '' }}
         uses: slackapi/slack-github-action@v1.26.0
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
-          slack-message: |
-            ⚾ Daily HR Picks for ${{ steps.picks.outputs.RUN_DATE }}! ⚾
-            Here are the top predictions:
-            ```
-            ${{ steps.picks.outputs.HR_PICKS }}
-            ```
+          payload: |
+            {
+              "text": "⚾ Daily HR Picks for ${{ steps.picks.outputs.RUN_DATE }}! ⚾",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "⚾ Daily HR Picks for ${{ steps.picks.outputs.RUN_DATE }}! ⚾"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Here are the top predictions:"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "```\\n${{ steps.picks.outputs.HR_PICKS }}\\n```"
+                  }
+                }
+              ]
+            }
 
