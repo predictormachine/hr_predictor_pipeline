@@ -1,0 +1,78 @@
+Loading cached Statcast data for 2025-08-06
+Loading cached lineup data for 2025-08-06
+
+DEBUG: sc.empty=False, sc.shape=(541314, 118)
+DEBUG: bats.empty=False, bats.shape=(75316, 7)
+DEBUG: pits.empty=False, pits.shape=(1138, 5)
+DEBUG: lu.empty=False, lu.shape=(261, 12)
+DEBUG: lu head before merge:
+  game_id                 team side  batting_order batter_id   batter_name position pitcher_id pitcher_name probable_pitcher probable_pitcher_id  is_confirmed
+  776844 San Francisco Giants away              1    671218  Heliot Ramos       LF     592662   Robbie Ray             None                None         False
+  776844 San Francisco Giants away              2    646240 Rafael Devers       DH     592662   Robbie Ray             None                None         False
+  776844 San Francisco Giants away              3    642715  Willy Adames       SS     592662   Robbie Ray             None                None         False
+  776844 San Francisco Giants away              4    656305  Matt Chapman       3B     592662   Robbie Ray             None                None         False
+  776844 San Francisco Giants away              5    669477 Casey Schmitt       2B     592662   Robbie Ray             None                None         False
+DEBUG: bats head before merge:
+ batter_id      batter_name  recent_hr_rate  avg_exit_velocity  avg_launch_angle  barrel_rate  hard_hit_rate
+   455117   Abbott, Andrew             0.0              88.55               6.0          0.0           10.0
+   455117 Armstrong, Shawn             0.0               60.9              56.0          0.0            0.0
+   455117     Ashby, Aaron             0.0               72.5             -48.0          0.0            0.0
+   455117    Backhus, Kyle             0.0               25.6             -83.0          0.0            0.0
+   455117    Banks, Tanner             0.0               66.3              38.0          0.0            0.0
+DEBUG: pits head before merge:
+ pitcher_id      pitcher_name  hr_rate_allowed  avg_exit_velocity_allowed  barrel_rate_allowed
+    434378 Verlander, Justin         0.613497                  83.012241             1.673173
+    445276    Jansen, Kenley         0.904977                  84.433712             1.809955
+    445926     Chavez, Jesse         1.612903                  83.338571             2.419355
+    448179        Hill, Rich         1.169591                  85.129787             1.169591
+    450203   Morton, Charlie         0.831601                  84.175164             1.351351
+DEBUG: df shape after batter merge: (42311, 18)
+DEBUG: df shape after pitcher merge: (42311, 22)
+DEBUG: NaNs after merges (before fillna):
+ game_id                          0
+team                             0
+side                             0
+batting_order                    0
+batter_id                        0
+batter_name_x                    0
+position                         0
+pitcher_id                       0
+pitcher_name_x                   0
+probable_pitcher             42311
+probable_pitcher_id          42311
+is_confirmed                     0
+batter_name_y                    0
+recent_hr_rate                   0
+avg_exit_velocity             3953
+avg_launch_angle              3941
+barrel_rate                      0
+hard_hit_rate                    0
+pitcher_name_y                1381
+hr_rate_allowed               1381
+avg_exit_velocity_allowed     1381
+barrel_rate_allowed           1381
+DEBUG: Head after merges (before fillna):
+  game_id                 team side  batting_order batter_id batter_name_x position pitcher_id pitcher_name_x probable_pitcher probable_pitcher_id  is_confirmed    batter_name_y  recent_hr_rate  avg_exit_velocity  avg_launch_angle  barrel_rate  hard_hit_rate pitcher_name_y  hr_rate_allowed  avg_exit_velocity_allowed  barrel_rate_allowed
+  776844 San Francisco Giants away              1    671218  Heliot Ramos       LF     592662     Robbie Ray             None                None         False      Adam, Jason        0.000000              106.2              22.0    50.000000      50.000000    Ray, Robbie         0.767918                   83.67551             1.365188
+  776844 San Francisco Giants away              1    671218  Heliot Ramos       LF     592662     Robbie Ray             None                None         False      Agnos, Zach        0.000000               67.6              53.0     0.000000       0.000000    Ray, Robbie         0.767918                   83.67551             1.365188
+  776844 San Francisco Giants away              1    671218  Heliot Ramos       LF     592662     Robbie Ray             None                None         False Alexander, Tyler        0.000000               89.5              37.0     0.000000       0.000000    Ray, Robbie         0.767918                   83.67551             1.365188
+  776844 San Francisco Giants away              1    671218  Heliot Ramos       LF     592662     Robbie Ray             None                None         False     Allen, Logan        7.692308          81.166667          5.833333     7.692308       7.692308    Ray, Robbie         0.767918                   83.67551             1.365188
+  776844 San Francisco Giants away              1    671218  Heliot Ramos       LF     592662     Robbie Ray             None                None         False   Altavilla, Dan        0.000000              87.75             -21.5     0.000000       9.090909    Ray, Robbie         0.767918                   83.67551             1.365188
+DEBUG: Head after fillna and composite:
+  game_id                 team side  batting_order batter_id  batter_name_x position pitcher_id pitcher_name_x probable_pitcher probable_pitcher_id  is_confirmed   batter_name_y  recent_hr_rate  avg_exit_velocity  avg_launch_angle  barrel_rate  hard_hit_rate pitcher_name_y  hr_rate_allowed  avg_exit_velocity_allowed  barrel_rate_allowed  composite_score
+  776850 Washington Nationals home              1    682928      CJ Abrams       SS     676917   Cade Cavalli             None                None         False     Sands, Cole           100.0              102.9              31.0        100.0          100.0            NaN         0.000000                        0.0             0.000000       100.000000
+  776849        Miami Marlins home              1    669364 Xavier Edwards       2B     676083    Janson Junk             None                None         False  Blewett, Scott           100.0               97.8              30.0        100.0          100.0   Junk, Janson         0.198413                  84.210312             1.289683        99.910714
+  776849        Miami Marlins home              2    669065   Kyle Stowers       DH     676083    Janson Junk             None                None         False Gómez, Yoendrys           100.0              108.9              21.0        100.0          100.0   Junk, Janson         0.198413                  84.210312             1.289683        99.910714
+  776849        Miami Marlins home              2    669065   Kyle Stowers       DH     676083    Janson Junk             None                None         False   Miller, Mason           100.0              107.2              23.0        100.0          100.0   Junk, Janson         0.198413                  84.210312             1.289683        99.910714
+  776851    Baltimore Orioles away              6    691723      Coby Mayo       1B     669432  Trevor Rogers             None                None         False Caballero, José           100.0              106.9              32.0        100.0          100.0 Rogers, Trevor         0.246305                  82.875758             1.354680        99.889163
+ team  side  probable_pitcher  is_confirmed  recent_hr_rate  barrel_rate  hard_hit_rate  hr_rate_allowed  composite_score
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.000000       100.000000
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.198413        99.910714
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.198413        99.910714
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.198413        99.910714
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.246305        99.889163
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.246305        99.889163
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.246305        99.889163
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.320513        99.855769
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.320513        99.855769
+  0.0   0.0               0.0         False           100.0        100.0          100.0         0.320513        99.855769
