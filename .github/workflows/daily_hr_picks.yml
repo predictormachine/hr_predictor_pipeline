@@ -70,35 +70,35 @@ jobs:
 
       - name: Send HR Picks to Slack
         if: ${{ success() && steps.picks.outputs.HR_PICKS != '' }}
-        uses: slackapi/slack-github-action@v1.26.0
+        shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        with:
-          payload: |
-            {
-              "text": "⚾ Daily HR Picks for ${{ steps.picks.outputs.RUN_DATE }}! ⚾",
-              "blocks": [
+          SLACK_HR_PICKS: ${{ steps.picks.outputs.HR_PICKS }}
+          RUN_DATE: ${{ steps.picks.outputs.RUN_DATE }}
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          PAYLOAD=$(jq -n \
+            --arg run_date "$RUN_DATE" \
+            --arg hr_picks "$SLACK_HR_PICKS" \
+            '{
+              text: "⚾ Daily HR Picks for \($run_date)! ⚾",
+              blocks: [
                 {
-                  "type": "header",
-                  "text": {
-                    "type": "plain_text",
-                    "text": "⚾ Daily HR Picks for ${{ steps.picks.outputs.RUN_DATE }}! ⚾"
-                  }
+                  type: "header",
+                  text: { type: "plain_text", text: "⚾ Daily HR Picks for \($run_date)! ⚾" }
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Here are the top predictions:"
-                  }
+                  type: "section",
+                  text: { type: "mrkdwn", text: "Here are the top predictions:" }
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "```\n${{ steps.picks.outputs.HR_PICKS }}\n```"
-                  }
+                  type: "section",
+                  text: { type: "mrkdwn", text: ("```" + "\n" + $hr_picks + "\n" + "```") }
                 }
               ]
-            }
+            }')
+          echo "$PAYLOAD"
+          curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
 
