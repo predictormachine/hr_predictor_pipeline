@@ -26,6 +26,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y jq
 
       - name: Fetch data & compute picks
         id: picks
@@ -47,6 +49,7 @@ jobs:
               echo "---------------------"
             fi
             echo "RUN_DATE=$DATE" >> "$GITHUB_OUTPUT"
+            echo "HR_PICKS=" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
@@ -57,6 +60,10 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
           echo "RUN_DATE=$DATE" >> "$GITHUB_OUTPUT"
+
+          MESSAGE="$(cat hr_output.txt)"
+          SANITIZED_MESSAGE=$(jq -rn --arg t "$MESSAGE" '$t')
+          echo "MESSAGE=$SANITIZED_MESSAGE" >> "$GITHUB_OUTPUT"
 
       - name: Upload Debug Artifacts
         uses: actions/upload-artifact@v4
@@ -70,24 +77,22 @@ jobs:
 
       - name: Send HR Picks to Slack
         if: ${{ success() && steps.picks.outputs.HR_PICKS != '' }}
-        shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_HR_PICKS: ${{ steps.picks.outputs.HR_PICKS }}
           RUN_DATE: ${{ steps.picks.outputs.RUN_DATE }}
+          HR_PICKS: ${{ steps.picks.outputs.HR_PICKS }}
+        shell: bash
         run: |
           set -e
-          sudo apt-get update -y
-          sudo apt-get install -y jq
           PAYLOAD=$(jq -n \
             --arg run_date "$RUN_DATE" \
-            --arg hr_picks "$SLACK_HR_PICKS" \
+            --arg hr_picks "$HR_PICKS" \
             '{
-              text: "⚾ Daily HR Picks for \($run_date)! ⚾",
+              text: ("⚾ Daily HR Picks for " + $run_date + "! ⚾"),
               blocks: [
                 {
                   type: "header",
-                  text: { type: "plain_text", text: "⚾ Daily HR Picks for \($run_date)! ⚾" }
+                  text: { type: "plain_text", text: ("⚾ Daily HR Picks for " + $run_date + "! ⚾") }
                 },
                 {
                   type: "section",
@@ -99,6 +104,9 @@ jobs:
                 }
               ]
             }')
+
+          echo "Payload being sent:"
           echo "$PAYLOAD"
-          curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
+
+          curl -sS -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
 
