@@ -37,10 +37,15 @@ jobs:
             DATE=$(date +%F)
           fi
 
-          python -m src.predict "$DATE" 10 > hr_output.txt || { echo "Prediction script failed!"; exit 1; }
+          python -m src.predict "$DATE" 10 > hr_output.txt 2> hr_error.txt || { echo "Prediction script returned a non-zero exit code!"; exit 1; }
 
           if [ ! -s hr_output.txt ]; then
-            echo "hr_output.txt is empty; failing job."
+            echo "hr_output.txt was not generated or is empty; failing job."
+            if [ -s hr_error.txt ]; then
+              echo "--- STDERR Output ---"
+              cat hr_error.txt
+              echo "---------------------"
+            fi
             echo "RUN_DATE=$DATE" >> "$GITHUB_OUTPUT"
             exit 1
           fi
@@ -53,14 +58,47 @@ jobs:
 
           echo "RUN_DATE=$DATE" >> "$GITHUB_OUTPUT"
 
+      - name: Upload Debug Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hr-debug-output-${{ steps.picks.outputs.RUN_DATE }}
+          path: |
+            hr_output.txt
+            hr_error.txt
+          retention-days: 7
+        if: always()
+
       - name: Send HR Picks to Slack
         if: ${{ success() && steps.picks.outputs.HR_PICKS != '' }}
         uses: slackapi/slack-github-action@v1.26.0
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
-          slack-message: |
-            ⚾ Daily HR Picks for ${{ steps.picks.outputs.RUN_DATE }}! ⚾
-            Here are the top predictions:
-            ${{ steps.picks.outputs.HR_PICKS }}
+          payload: |
+            {
+              "text": "⚾ Daily HR Picks for ${{ steps.picks.outputs.RUN_DATE }}! ⚾",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "⚾ Daily HR Picks for ${{ steps.picks.outputs.RUN_DATE }}! ⚾"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Here are the top predictions:"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "```\n${{ steps.picks.outputs.HR_PICKS }}\n```"
+                  }
+                }
+              ]
+            }
 
